@@ -1,0 +1,26 @@
+# MQL5 RAG Engine Dependencies
+# Task C12: Lambda Container Requirements
+
+# AWS SDK for DynamoDB and S3 operations
+boto3>=1.34.0
+
+# Vector similarity search library
+faiss-cpu>=1.7.4
+
+# Local sentence embeddings
+sentence-transformers>=2.2.2
+
+# Core ML dependencies (optimized versions)
+torch>=2.0.0,<2.2.0
+torchvision>=0.15.0,<0.17.0
+transformers>=4.30.0
+
+# Utilities for data handling
+numpy>=1.24.0
+scikit-learn>=1.3.0
+
+# JSON handling and logging
+structlog>=23.1.0
+
+# HTTP client (for potential future extensions)
+requests>=2.31.0
