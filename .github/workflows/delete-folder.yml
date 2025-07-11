@@ -1,0 +1,35 @@
+name: Delete Folder
+
+on:
+  workflow_dispatch:
+    inputs:
+      folder:
+        description: 'Name of the folder to delete'
+        required: true
+        default: 'mql5_test'
+
+jobs:
+  delete-folder:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Configure Git
+      run: |
+        git config --global user.name "github-actions[bot]"
+        git config --global user.email "github-actions[bot]@users.noreply.github.com"
+
+    - name: Delete the specified folder
+      run: |
+        FOLDER_NAME="${{ github.event.inputs.folder }}"
+        
+        if [ -d "$FOLDER_NAME" ]; then
+          rm -rf "$FOLDER_NAME"
+          git add -A
+          git commit -m "Auto-delete folder: $FOLDER_NAME"
+          git push
+        else
+          echo "Folder '$FOLDER_NAME' does not exist. Nothing to delete."
+        fi
