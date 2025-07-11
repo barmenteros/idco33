@@ -1,0 +1,267 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'API Gateway with /rag endpoint - MQL5 Prompt Enrichment Middleware - Task A4'
+
+Parameters:
+  ProjectName:
+    Type: String
+    Default: 'mql5-rag'
+    Description: 'Project name used for resource naming and tagging'
+    AllowedPattern: '^[a-z0-9-]+$'
+    ConstraintDescription: 'Must contain only lowercase letters, numbers, and hyphens'
+  
+  ApiStageName:
+    Type: String
+    Default: 'prod'
+    Description: 'API Gateway deployment stage name'
+    AllowedValues: ['prod', 'dev', 'v1']
+
+Resources:
+  # REST API Gateway
+  MQL5RAGRestApi:
+    Type: 'AWS::ApiGateway::RestApi'
+    Properties:
+      Name: !Sub '${ProjectName}-api'
+      Description: 'REST API for MQL5 RAG middleware with /rag endpoint'
+      EndpointConfiguration:
+        Types:
+          - REGIONAL
+      Policy:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal: '*'
+            Action: 'execute-api:Invoke'
+            Resource: '*'
+            Condition:
+              IpAddress:
+                'aws:SourceIp': '0.0.0.0/0'
+      Tags:
+        - Key: Project
+          Value: !Ref ProjectName
+        - Key: Component
+          Value: API-Gateway
+
+  # /rag Resource
+  RAGResource:
+    Type: 'AWS::ApiGateway::Resource'
+    Properties:
+      RestApiId: !Ref MQL5RAGRestApi
+      ParentId: !GetAtt MQL5RAGRestApi.RootResourceId
+      PathPart: 'rag'
+
+  # POST Method for /rag
+  RAGPostMethod:
+    Type: 'AWS::ApiGateway::Method'
+    Properties:
+      RestApiId: !Ref MQL5RAGRestApi
+      ResourceId: !Ref RAGResource
+      HttpMethod: POST
+      AuthorizationType: NONE
+      ApiKeyRequired: true
+      RequestParameters:
+        method.request.header.Content-Type: true
+      RequestValidatorId: !Ref RequestValidator
+      MethodResponses:
+        - StatusCode: '200'
+          ResponseModels:
+            application/json: !Ref ResponseModel
+          ResponseParameters:
+            method.response.header.Access-Control-Allow-Origin: true
+            method.response.header.Access-Control-Allow-Headers: true
+            method.response.header.Access-Control-Allow-Methods: true
+        - StatusCode: '400'
+          ResponseModels:
+            application/json: !Ref ErrorResponseModel
+        - StatusCode: '500'
+          ResponseModels:
+            application/json: !Ref ErrorResponseModel
+      Integration:
+        Type: AWS_PROXY
+        IntegrationHttpMethod: POST
+        Uri: !Sub 
+          - 'arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${LambdaArn}/invocations'
+          - LambdaArn: !Sub 'arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:${ProjectName}-rag-handler'
+        IntegrationResponses:
+          - StatusCode: '200'
+            ResponseParameters:
+              method.response.header.Access-Control-Allow-Origin: "'*'"
+              method.response.header.Access-Control-Allow-Headers: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'"
+              method.response.header.Access-Control-Allow-Methods: "'POST,OPTIONS'"
+
+  # OPTIONS Method for CORS
+  RAGOptionsMethod:
+    Type: 'AWS::ApiGateway::Method'
+    Properties:
+      RestApiId: !Ref MQL5RAGRestApi
+      ResourceId: !Ref RAGResource
+      HttpMethod: OPTIONS
+      AuthorizationType: NONE
+      ApiKeyRequired: false
+      MethodResponses:
+        - StatusCode: '200'
+          ResponseParameters:
+            method.response.header.Access-Control-Allow-Origin: true
+            method.response.header.Access-Control-Allow-Headers: true
+            method.response.header.Access-Control-Allow-Methods: true
+      Integration:
+        Type: MOCK
+        RequestTemplates:
+          application/json: '{"statusCode": 200}'
+        IntegrationResponses:
+          - StatusCode: '200'
+            ResponseParameters:
+              method.response.header.Access-Control-Allow-Origin: "'*'"
+              method.response.header.Access-Control-Allow-Headers: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'"
+              method.response.header.Access-Control-Allow-Methods: "'POST,OPTIONS'"
+
+  # Request Validator
+  RequestValidator:
+    Type: 'AWS::ApiGateway::RequestValidator'
+    Properties:
+      RestApiId: !Ref MQL5RAGRestApi
+      Name: 'RAGRequestValidator'
+      ValidateRequestBody: true
+      ValidateRequestParameters: true
+
+  # Request Model
+  RequestModel:
+    Type: 'AWS::ApiGateway::Model'
+    Properties:
+      RestApiId: !Ref MQL5RAGRestApi
+      ContentType: 'application/json'
+      Name: 'RAGRequestModel'
+      Schema:
+        type: object
+        required:
+          - prompt
+        properties:
+          prompt:
+            type: string
+            minLength: 1
+            maxLength: 10000
+          max_snippets:
+            type: integer
+            minimum: 1
+            maximum: 10
+            default: 5
+
+  # Response Model
+  ResponseModel:
+    Type: 'AWS::ApiGateway::Model'
+    Properties:
+      RestApiId: !Ref MQL5RAGRestApi
+      ContentType: 'application/json'
+      Name: 'RAGResponseModel'
+      Schema:
+        type: object
+        properties:
+          snippets:
+            type: array
+            items:
+              type: object
+              properties:
+                snippet:
+                  type: string
+                source:
+                  type: string
+                score:
+                  type: number
+
+  # Error Response Model
+  ErrorResponseModel:
+    Type: 'AWS::ApiGateway::Model'
+    Properties:
+      RestApiId: !Ref MQL5RAGRestApi
+      ContentType: 'application/json'
+      Name: 'ErrorResponseModel'
+      Schema:
+        type: object
+        properties:
+          error:
+            type: string
+          message:
+            type: string
+
+  # API Key
+  MQL5RAGApiKey:
+    Type: 'AWS::ApiGateway::ApiKey'
+    Properties:
+      Name: !Sub '${ProjectName}-api-key'
+      Description: 'API Key for MQL5 RAG middleware access'
+      Enabled: true
+      Tags:
+        - Key: Project
+          Value: !Ref ProjectName
+        - Key: Component
+          Value: API-Key
+
+  # Usage Plan
+  MQL5RAGUsagePlan:
+    Type: 'AWS::ApiGateway::UsagePlan'
+    DependsOn: ApiDeployment
+    Properties:
+      UsagePlanName: !Sub '${ProjectName}-usage-plan'
+      Description: 'Usage plan for MQL5 RAG API with rate limiting'
+      Throttle:
+        RateLimit: 25
+        BurstLimit: 50
+      Quota:
+        Limit: 100000
+        Period: MONTH
+      ApiStages:
+        - ApiId: !Ref MQL5RAGRestApi
+          Stage: !Ref ApiStageName
+      Tags:
+        - Key: Project
+          Value: !Ref ProjectName
+        - Key: Component
+          Value: Usage-Plan
+
+  # Usage Plan Key (Links API Key to Usage Plan)
+  MQL5RAGUsagePlanKey:
+    Type: 'AWS::ApiGateway::UsagePlanKey'
+    Properties:
+      KeyId: !Ref MQL5RAGApiKey
+      KeyType: API_KEY
+      UsagePlanId: !Ref MQL5RAGUsagePlan
+
+  # API Deployment
+  ApiDeployment:
+    Type: 'AWS::ApiGateway::Deployment'
+    DependsOn: 
+      - RAGPostMethod
+      - RAGOptionsMethod
+    Properties:
+      RestApiId: !Ref MQL5RAGRestApi
+      StageName: !Ref ApiStageName
+
+Outputs:
+  ApiGatewayId:
+    Description: 'ID of the API Gateway REST API'
+    Value: !Ref MQL5RAGRestApi
+    Export:
+      Name: !Sub '${ProjectName}-api-gateway-id'
+  
+  ApiGatewayRootResourceId:
+    Description: 'Root resource ID of the API Gateway'
+    Value: !GetAtt MQL5RAGRestApi.RootResourceId
+    Export:
+      Name: !Sub '${ProjectName}-api-gateway-root-resource-id'
+  
+  ApiEndpointUrl:
+    Description: 'URL of the /rag endpoint'
+    Value: !Sub 'https://${MQL5RAGRestApi}.execute-api.${AWS::Region}.amazonaws.com/${ApiStageName}/rag'
+    Export:
+      Name: !Sub '${ProjectName}-api-endpoint-url'
+  
+  ApiKeyId:
+    Description: 'ID of the API Key for authentication'
+    Value: !Ref MQL5RAGApiKey
+    Export:
+      Name: !Sub '${ProjectName}-api-key-id'
+  
+  ApiKeyValue:
+    Description: 'Value of the API Key (for PromptProxy configuration)'
+    Value: !Ref MQL5RAGApiKey
+    Export:
+      Name: !Sub '${ProjectName}-api-key-value'

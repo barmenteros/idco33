@@ -1,0 +1,70 @@
+# MQL5 PromptProxy Configuration
+# Task D24: Complete configuration with circuit-breaker and retry settings
+
+# Server configuration
+host: "localhost"
+port: 8080
+log_level: "INFO"
+cors_origins: ["*"]
+max_prompt_length: 10000
+
+# AWS RAG Integration (Task D22)
+aws:
+  # API Gateway URL from Task A4 deployment
+  api_gateway_url: "https://b6qmhutxnc.execute-api.us-east-1.amazonaws.com/prod/rag"
+  
+  # API Key from Task A4 deployment
+  api_key: "DNpEmzqcgQ2GcwB10LDBx9H3wBnQZ0Cr7z17HDzh"
+  
+  # Timeout for RAG calls in seconds
+  timeout_seconds: 2.0
+
+# Augmentation Template Configuration (Task D23)
+augmentation:
+  # Maximum number of snippets to include in augmented prompt
+  max_snippets: 5
+  
+  # Separator between snippets
+  snippet_separator: "\n\n"
+
+# Circuit Breaker Configuration (Task D24)
+circuit_breaker:
+  # Number of consecutive failures before opening circuit
+  failure_threshold: 3
+  
+  # Number of consecutive successes needed to close circuit from HALF_OPEN
+  success_threshold: 2
+  
+  # Cooldown duration in seconds before transitioning to HALF_OPEN
+  cooldown_duration: 300  # 5 minutes
+  
+  # Maximum test requests allowed in HALF_OPEN state
+  half_open_max_requests: 3
+
+# Retry Policy Configuration (Task D24)
+retry:
+  # Maximum number of retry attempts (0 = no retries, 1 = one retry, etc.)
+  max_retries: 1
+  
+  # Initial delay between retries in milliseconds
+  delay_ms: 100
+  
+  # Multiplier for exponential backoff (2.0 = double delay each retry)
+  backoff_multiplier: 2.0
+
+# Example usage:
+# 1. Update the aws section with your actual API Gateway details
+# 2. Adjust circuit_breaker settings for your reliability requirements
+# 3. Configure retry policy based on your network conditions
+# 4. Run: python promptproxy_server.py --config config.yaml
+
+# Circuit Breaker States:
+# - CLOSED: Normal operation, all requests allowed
+# - OPEN: All requests blocked, fallback to original prompt
+# - HALF_OPEN: Testing recovery with limited requests
+#
+# State Transitions:
+# CLOSED --[failure_threshold failures]--> OPEN
+# OPEN --[cooldown_duration elapsed]--> HALF_OPEN  
+# HALF_OPEN --[success_threshold successes]--> CLOSED
+# HALF_OPEN --[any failure]--> OPEN

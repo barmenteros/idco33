@@ -1,0 +1,25 @@
+augmentation:
+  max_snippets: 5
+  snippet_separator: '
+
+
+    '
+aws:
+  api_gateway_url: https://b6qmhutxnc.execute-api.us-east-1.amazonaws.com/prod/rag
+  api_key: DNpEmzqcgQ2GcwB10LDBx9H3wBnQZ0Cr7z17HDzh
+  timeout_seconds: 2.0
+circuit_breaker:
+  cooldown_duration: 300
+  failure_threshold: 3
+  half_open_max_requests: 3
+  success_threshold: 2
+cors_origins:
+- '*'
+host: localhost
+log_level: INFO
+max_prompt_length: 10000
+port: 8080
+retry:
+  backoff_multiplier: 2.0
+  delay_ms: 100
+  max_retries: 1

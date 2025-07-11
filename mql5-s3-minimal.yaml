@@ -1,0 +1,49 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'Minimal S3 Bucket for FAISS Index Storage - MQL5 Prompt Enrichment Middleware - Task A2'
+
+Parameters:
+  ProjectName:
+    Type: String
+    Default: 'mql5-rag'
+    Description: 'Project name used for resource naming and tagging'
+  
+  S3BucketName:
+    Type: String
+    Default: 'mql5-rag-faiss-index-20250106-minimal'
+    Description: 'S3 bucket name for storing FAISS index files'
+
+Resources:
+  # Minimal S3 Bucket for FAISS Index Storage
+  MQL5RAGFaissIndexBucket:
+    Type: 'AWS::S3::Bucket'
+    Properties:
+      BucketName: !Ref S3BucketName
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      Tags:
+        - Key: Project
+          Value: !Ref ProjectName
+        - Key: Component
+          Value: FAISS-Index-Storage
+        - Key: Note
+          Value: Security-via-IAM-roles-only
+
+Outputs:
+  BucketName:
+    Description: 'Name of the S3 bucket for FAISS index storage'
+    Value: !Ref MQL5RAGFaissIndexBucket
+    Export:
+      Name: !Sub '${ProjectName}-faiss-index-bucket-name'
+  
+  BucketArn:
+    Description: 'ARN of the S3 bucket for FAISS index storage'
+    Value: !GetAtt MQL5RAGFaissIndexBucket.Arn
+    Export:
+      Name: !Sub '${ProjectName}-faiss-index-bucket-arn'

@@ -1,0 +1,74 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'DynamoDB Table for Documentation Snippets - MQL5 Prompt Enrichment Middleware - Task A3'
+
+Parameters:
+  ProjectName:
+    Type: String
+    Default: 'mql5-rag'
+    Description: 'Project name used for resource naming and tagging'
+    AllowedPattern: '^[a-z0-9-]+$'
+    ConstraintDescription: 'Must contain only lowercase letters, numbers, and hyphens'
+  
+  DynamoDBTableName:
+    Type: String
+    Default: 'mql5-doc-snippets'
+    Description: 'DynamoDB table name for storing documentation snippets'
+    AllowedPattern: '^[a-zA-Z0-9_.-]+$'
+    ConstraintDescription: 'Must be a valid DynamoDB table name'
+
+Resources:
+  # DynamoDB Table for Documentation Snippets
+  MQL5DocumentSnippetsTable:
+    Type: 'AWS::DynamoDB::Table'
+    Properties:
+      TableName: !Ref DynamoDBTableName
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: 'DocID'
+          AttributeType: 'S'
+      KeySchema:
+        - AttributeName: 'DocID'
+          KeyType: 'HASH'
+      PointInTimeRecoverySpecification:
+        PointInTimeRecoveryEnabled: false
+      DeletionProtectionEnabled: false
+      StreamSpecification:
+        StreamViewType: 'NEW_AND_OLD_IMAGES'
+      SSESpecification:
+        SSEEnabled: true
+      Tags:
+        - Key: Project
+          Value: !Ref ProjectName
+        - Key: Component
+          Value: Documentation-Snippets
+        - Key: Purpose
+          Value: RAG-Text-Storage
+        - Key: BillingMode
+          Value: OnDemand
+        - Key: DataType
+          Value: MQL5-Documentation
+
+Outputs:
+  TableName:
+    Description: 'Name of the DynamoDB table for documentation snippets'
+    Value: !Ref MQL5DocumentSnippetsTable
+    Export:
+      Name: !Sub '${ProjectName}-doc-snippets-table-name'
+  
+  TableArn:
+    Description: 'ARN of the DynamoDB table for documentation snippets'
+    Value: !GetAtt MQL5DocumentSnippetsTable.Arn
+    Export:
+      Name: !Sub '${ProjectName}-doc-snippets-table-arn'
+  
+  TableStreamArn:
+    Description: 'Stream ARN of the DynamoDB table (for potential future use)'
+    Value: !GetAtt MQL5DocumentSnippetsTable.StreamArn
+    Export:
+      Name: !Sub '${ProjectName}-doc-snippets-table-stream-arn'
+  
+  ProjectName:
+    Description: 'Project name for reference by other stacks'
+    Value: !Ref ProjectName
+    Export:
+      Name: !Sub '${ProjectName}-project-name-from-dynamodb'
