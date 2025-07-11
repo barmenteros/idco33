@@ -1,0 +1,11 @@
+{
+  "index_file_size_mb": 3.3765077590942383,
+  "total_vectors": 2305,
+  "index_dimension": 384,
+  "index_type": "IndexFlatIP",
+  "build_time_seconds": 0.0018546581268310547,
+  "vectors_per_second": 1242816.649955007,
+  "memory_footprint_estimate_mb": 3.37646484375,
+  "ready_for_lambda": true,
+  "ready_for_s3_upload": true
+}
